@@ -169,6 +169,11 @@
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.12); }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .heart { animation: none; }
+    .reveal-wrap { animation: none; }
+    .bar-fill { transition: none; }
+  }
 
   /* ---------- RECIPIENT: reveal skins ---------- */
   .reveal-wrap {
@@ -384,35 +389,55 @@ function renderSender() {
   `;
 
   const catTabs = document.getElementById('catTabs');
+  catTabs.setAttribute('role', 'tablist');
   catKeys.forEach(key => {
     const tab = document.createElement('div');
     tab.className = 'cat-tab' + (key === activeCat ? ' active' : '');
     tab.textContent = MESSAGE_BANK[key].emoji + ' ' + MESSAGE_BANK[key].label;
-    tab.addEventListener('click', () => {
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('tabindex', '0');
+    tab.setAttribute('aria-selected', key === activeCat ? 'true' : 'false');
+    const selectTab = () => {
       activeCat = key;
       selectedIndex = 0;
-      document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.cat-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
       tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
       renderMsgList();
+    };
+    tab.addEventListener('click', selectTab);
+    tab.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectTab(); }
     });
     catTabs.appendChild(tab);
   });
 
   function renderMsgList() {
     const list = document.getElementById('msgList');
+    list.setAttribute('role', 'listbox');
     list.innerHTML = '';
     MESSAGE_BANK[activeCat].items.forEach((item, idx) => {
       const [text, tier] = item;
       const row = document.createElement('div');
       row.className = 'msg-item' + (idx === selectedIndex && !useCustom ? ' selected' : '');
+      row.setAttribute('role', 'option');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('aria-selected', idx === selectedIndex && !useCustom ? 'true' : 'false');
       row.innerHTML = `<span>${text}</span><span class="spice">${'🌶️'.repeat(tier)}</span>`;
-      row.addEventListener('click', () => {
+      const selectItem = () => {
         selectedIndex = idx;
         useCustom = false;
         document.getElementById('customToggle').checked = false;
         document.getElementById('customText').disabled = true;
         document.getElementById('tierRow').style.display = 'none';
         renderMsgList();
+      };
+      row.addEventListener('click', selectItem);
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectItem(); }
       });
       list.appendChild(row);
     });
@@ -452,10 +477,18 @@ function renderSender() {
     document.getElementById('resultBlock').classList.add('show');
   });
 
-  document.getElementById('copyBtn').addEventListener('click', () => {
+  document.getElementById('copyBtn').addEventListener('click', async () => {
     const linkOut = document.getElementById('linkOut');
-    linkOut.select();
-    document.execCommand('copy');
+    const copyBtn = document.getElementById('copyBtn');
+    try {
+      await navigator.clipboard.writeText(linkOut.value);
+    } catch (e) {
+      linkOut.select();
+      document.execCommand('copy');
+    }
+    const original = copyBtn.textContent;
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = original; }, 1500);
   });
   document.getElementById('previewBtn').addEventListener('click', () => {
     const url = document.getElementById('linkOut').value;
@@ -477,14 +510,15 @@ function renderRecipient(encoded) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="loading-card" id="loadingCard">
-      <div class="heart">💛</div>
+      <div class="heart" aria-hidden="true">💛</div>
       <h2>Sending you something good...</h2>
-      <div class="status" id="statusLine">${STATUS_LINES[0]}</div>
-      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="status" id="statusLine" aria-live="polite">${STATUS_LINES[0]}</div>
+      <div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="barTrack"><div class="bar-fill" id="barFill"></div></div>
     </div>
   `;
 
   const bar = document.getElementById('barFill');
+  const barTrack = document.getElementById('barTrack');
   const statusLine = document.getElementById('statusLine');
   let progress = 0;
   let lineIdx = 0;
@@ -497,6 +531,7 @@ function renderRecipient(encoded) {
     step++;
     progress = Math.min(100, Math.round((step / steps) * 100));
     bar.style.width = progress + '%';
+    barTrack.setAttribute('aria-valuenow', String(progress));
     const nextLineIdx = Math.min(STATUS_LINES.length - 1, Math.floor((progress / 100) * STATUS_LINES.length));
     if (nextLineIdx !== lineIdx) {
       lineIdx = nextLineIdx;

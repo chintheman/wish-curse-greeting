@@ -1,10 +1,10 @@
 # Wish/Curse Greeting Site — Handoff Status Report
 
-**Status:** Working prototype, content brainstorm complete. Not yet hardened, hosted, or tested outside one automated browser run.
+**Status:** Hardened and deployed. Clipboard, reduced-motion, and keyboard/screen-reader basics fixed; all 8 skins visually QA'd; live on GitHub Pages.
 **Last updated:** 2026-07-24
-**Reference files (to be added to this repo):** `wish-content-brainstorm.md` (copy reference), `wish-app/index.html` (the app itself)
+**Reference files:** `wish-content-brainstorm.md` (copy reference), `wish-app/index.html` (the app itself)
 
-> This report was written from a handoff summary during repo setup. Both reference files above have since been committed to this repository — see "Open item" at the bottom.
+> This report was written from a handoff summary during repo setup, then updated in place as follow-up work landed the same day. See "Update — 2026-07-24 (build-out pass)" near the bottom for what changed after the initial handoff.
 
 ---
 
@@ -59,15 +59,22 @@ No backend. No database. No auth. It's a single static HTML file (`wish-app/inde
 
 ## 4. What's been tested vs. not
 
-**Verified:** ran an automated Playwright pass (headless Chromium) that opened the sender UI, selected the Curse tab, picked a tier-5 item, generated a link, navigated to it, and confirmed the loading sequence resolved to the correct message, correct badge, and a valid random skin class. Confirmed the encode/decode round-trip works and that unrelated runs produce different skins (randomness is working, not hardcoded).
+**Verified:**
+
+- Full sender → link → loading → reveal flow via Playwright (headless Chromium): Curse tab, tier-5 item, link generation, and correct message/badge/skin on reveal. Encode/decode round-trip confirmed correct, and skin randomness confirmed (not hardcoded).
+- All 8 skins rendered and screenshotted with `Math.random` deterministically forced per-skin — confetti, starlight, floral, retro, balloon, zen, neon, and lantern all show correct background/text/badge/button contrast and legible text at a 900px desktop viewport. No skin-specific layout breakage found.
+- Mobile viewport emulation (iPhone 13, Pixel 5 via Playwright device profiles) for both the sender view and a full tap-driven reveal flow: no horizontal overflow on either device, cat-tab and msg-item tap targets both ≥32px tall.
+- `prefers-reduced-motion: reduce` respected — heart pulse and reveal fade-in animations are disabled via a media query when the user has that OS-level preference set.
+- Keyboard navigation confirmed: category tabs and message list items are focusable (`tabindex="0"`) and selectable with Enter/Space, with `role="tab"`/`role="option"` and `aria-selected` wired up for screen readers. The loading progress bar has `role="progressbar"` with live `aria-valuenow`, and the status line is `aria-live="polite"`.
+- Clipboard copy now uses `navigator.clipboard.writeText()` (verified programmatically against `navigator.clipboard.readText()`), falling back to the old `execCommand('copy')` only if the modern API throws. Button shows "Copied!" for 1.5s as user feedback.
+- Deployed to GitHub Pages via `.github/workflows/deploy-pages.yml` — see the Update section below for details and the live URL.
 
 **Not yet verified — flag these before wider use:**
 
-- Real mobile browsers (iOS Safari / Android Chrome) — only tested in desktop headless Chromium so far. Font stacks, tap targets, and viewport behavior on an actual phone haven't been eyeballed.
-- Actual SMS/iMessage link-sharing behavior — long base64 payloads make for long, ugly URLs. Some messaging apps may wrap, truncate previews oddly, or generate a link-preview card that shows part of the raw payload before it's clicked. Worth a real test send.
-- Clipboard copy button uses the deprecated `document.execCommand('copy')`, which still works in most browsers but should be swapped for `navigator.clipboard.writeText()` for reliability, especially on iOS Safari where the old API is flaky.
-- Cross-browser visual QA of all 8 skins — only spot-checked one (Neon Arcade) via the automated test. The rest haven't been visually confirmed to render as intended.
-- No accessibility pass (contrast ratios on skins like Neon or Starlight, screen reader behavior, reduced-motion preference for the pulsing heart / progress animation).
+- Real physical mobile devices (iOS Safari / Android Chrome) — only tested via Playwright's device emulation (Chromium with spoofed viewport/UA), not an actual phone. Font rendering, real touch behavior, and Safari-specific quirks are still unconfirmed.
+- Actual SMS/iMessage link-sharing behavior — long base64 payloads make for long, ugly URLs. Some messaging apps may wrap, truncate previews oddly, or generate a link-preview card that shows part of the raw payload before it's clicked. Worth a real test send now that there's a stable hosted URL to send.
+- Real screen-reader testing (VoiceOver/NVDA/TalkBack) — the ARIA roles and live regions added in this pass are structurally correct but haven't been listened to with an actual screen reader.
+- Formal contrast-ratio audit (e.g. WCAG AA numbers per skin) — the skins were checked by eye via screenshots and all read as clearly legible, but no automated contrast-checker pass has been run.
 
 ## 5. Known limitations / things to decide on purpose, not by accident
 
@@ -77,14 +84,20 @@ No backend. No database. No auth. It's a single static HTML file (`wish-app/inde
 - No moderation on custom messages. The free-text option has no filter at all beyond HTML-escaping for safety (no script injection). Anything the sender types goes out verbatim. Fine for a closed friend group; a real gap if this becomes multi-user/public.
 - Category badge appears on custom messages too, tagged with whatever tab was active when the sender wrote it — there's no way currently to send a fully "uncategorized" custom message.
 
-## 6. Suggested next steps (not yet started)
+## 6. Suggested next steps
 
-1. Real-device test pass — send an actual link via text to a phone, click through, screenshot each skin.
-2. Swap clipboard copy to `navigator.clipboard.writeText()`.
-3. Decide on hosting: this is a static file, so GitHub Pages, Netlify, Vercel, or even a personal S3 bucket all work with zero backend changes. Needs a domain decision (something in the make-everything-ok.com naming family, e.g. a "send-a-wish"-style name) — not yet chosen.
-4. Decide whether to add the "sender chooses the skin too" option that was discussed and deferred, or keep skins fully random as-is.
-5. Decide whether custom messages should support opting out of a category badge entirely.
-6. If this expands past friends: revisit the savage-tier content boundary, add basic reporting/blocking, and consider whether payload obscurity is still acceptable or needs real server-side storage.
+**Done:**
+
+1. ~~Swap clipboard copy to `navigator.clipboard.writeText()`.~~ Done — see Update section below.
+2. ~~Decide on hosting.~~ Done — deployed to GitHub Pages (free, zero-backend, matches the static-file architecture). No custom domain chosen yet; still using the default `chintheman.github.io/wish-curse-greeting/` URL.
+
+**Still open:**
+
+1. Real-device test pass — send an actual link via text to a phone, click through, screenshot each skin. Emulated-device testing (Playwright) is done; a real phone still isn't.
+2. Custom domain decision (something in the make-everything-ok.com naming family, e.g. a "send-a-wish"-style name) — not yet chosen. GitHub Pages supports a custom domain via a `CNAME` file whenever one is picked.
+3. Decide whether to add the "sender chooses the skin too" option that was discussed and deferred, or keep skins fully random as-is.
+4. Decide whether custom messages should support opting out of a category badge entirely.
+5. If this expands past friends: revisit the savage-tier content boundary, add basic reporting/blocking, and consider whether payload obscurity is still acceptable or needs real server-side storage.
 
 ## 7. How to run it locally
 
@@ -98,6 +111,21 @@ then visit `http://localhost:8000/`. The sender view loads by default; append `?
 
 ---
 
+## Update — 2026-07-24 (build-out pass)
+
+Same day as the initial handoff, a follow-up pass closed out most of the "not yet started" items:
+
+- **Clipboard:** `copyBtn` now calls `navigator.clipboard.writeText()` with a fallback to the old `document.execCommand('copy')` if the modern API throws (e.g. insecure context). Button label flips to "Copied!" for 1.5s as feedback.
+- **Reduced motion:** added `@media (prefers-reduced-motion: reduce)` disabling the heart-pulse animation, the reveal fade-in, and the progress-bar width transition.
+- **Accessibility basics:** category tabs and message-list items are now keyboard-focusable and selectable (Enter/Space), with `role="tab"`/`role="option"`/`aria-selected` wired up; the loading bar is `role="progressbar"` with a live `aria-valuenow`; the status line is `aria-live="polite"`.
+- **Visual QA:** all 8 skins screenshotted at a 900px desktop viewport (forcing `Math.random` deterministically per skin to bypass the random assignment) and reviewed by eye — all render with legible text, working badges, and no layout breakage.
+- **Mobile QA:** Playwright device emulation (iPhone 13, Pixel 5) covering both the sender view and a full tap-through reveal flow — no horizontal overflow, tap targets ≥32px.
+- **Hosting:** deployed via a new `.github/workflows/deploy-pages.yml` GitHub Actions workflow (`actions/configure-pages` + `actions/upload-pages-artifact` + `actions/deploy-pages`, serving the `wish-app/` directory as the Pages root). This requires no manual "enable Pages" step in repo settings — the workflow's own `pages: write` permission is sufficient to provision the Pages site on first run. **Live at:** https://chintheman.github.io/wish-curse-greeting/
+
+None of this changed the message content, the payload encoding scheme, or the skins' visual design — it's hardening and shipping, not a rewrite. The content-tier judgment calls in Section 2, and the known limitations in Section 5 (payload not secret, no persistence/expiry, no moderation on custom text), are all still exactly as they were and still worth a deliberate decision before this goes past a friend group.
+
 ## Open item
 
 ~~This repository (`chintheman/wish-curse-greeting`) was just created to host this project and currently contains only this report — `wish-app/index.html` and `wish-content-brainstorm.md` themselves have not been added yet.~~ **Resolved:** both files were added in a follow-up commit and now live at [`wish-app/index.html`](../wish-app/index.html) and [`wish-content-brainstorm.md`](../wish-content-brainstorm.md).
+
+No other open items from repo setup remain. See "Still open" under Section 6 for the substantive product/content decisions that remain.

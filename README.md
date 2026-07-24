@@ -2,7 +2,9 @@
 
 A trojan-horse greeting card generator: the sender picks a message anywhere from genuinely wholesome to fully savage, generates a link, and the recipient always sees the same generic "something wholesome is loading" sequence before a randomized reveal.
 
-**Status:** working prototype, content brainstorm complete, not yet hardened or hosted.
+**Status:** working prototype, content brainstorm complete, deployed to GitHub Pages.
+
+**Live:** https://chintheman.github.io/wish-curse-greeting/ (deploys automatically from `main` via `.github/workflows/deploy-pages.yml`)
 
 See [`reports/2026-07-24-handoff-status-report.md`](reports/2026-07-24-handoff-status-report.md) for the full handoff report — concept, product spec, technical architecture, test coverage, known limitations, and suggested next steps.
 
