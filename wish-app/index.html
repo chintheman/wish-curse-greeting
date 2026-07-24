@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Send a Wish</title>
+<style>
+  :root {
+    --bg: #f4f1ec;
+    --card: #ffffff;
+    --ink: #2b2b2b;
+    --muted: #74706a;
+    --accent: #d98c5f;
+    --accent-2: #6f8f6f;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  #app {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  /* ---------- SENDER UI (fixed design) ---------- */
+  .sender-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    padding: 32px;
+    width: 100%;
+    max-width: 560px;
+  }
+  .sender-card h1 {
+    margin: 0 0 4px;
+    font-size: 26px;
+  }
+  .sender-card p.sub {
+    margin: 0 0 24px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .cat-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .cat-tab {
+    border: 1px solid #e2ddd3;
+    background: #fbfaf7;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .15s ease;
+  }
+  .cat-tab.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .msg-list {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid #eee6d9;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .msg-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1ece2;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.4;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .msg-item:last-child { border-bottom: none; }
+  .msg-item:hover { background: #faf7f0; }
+  .msg-item.selected { background: #fdeee0; }
+  .spice { white-space: nowrap; font-size: 11px; color: var(--muted); }
+  .custom-block {
+    border: 1px dashed #ddd3c0;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  .custom-block label { font-size: 12px; color: var(--muted); display:block; margin-bottom: 6px;}
+  textarea, .link-out {
+    width: 100%;
+    border: 1px solid #e2ddd3;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .tier-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .tier-row input[type=range] { flex:1; }
+  .btn {
+    display: inline-block;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    margin-right: 8px;
+    margin-top: 6px;
+  }
+  .btn.secondary {
+    background: #efe9dd;
+    color: var(--ink);
+  }
+  .result {
+    margin-top: 18px;
+    display: none;
+  }
+  .result.show { display: block; }
+
+  /* ---------- RECIPIENT: loading (generic, always identical) ---------- */
+  .loading-card {
+    text-align: center;
+    max-width: 420px;
+  }
+  .loading-card h2 {
+    font-size: 22px;
+    margin-bottom: 6px;
+  }
+  .loading-card .status {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 22px;
+    min-height: 20px;
+  }
+  .bar-track {
+    width: 100%;
+    height: 10px;
+    background: #e9e3d6;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #d98c5f, #e8b48a);
+    border-radius: 999px;
+    transition: width .3s ease;
+  }
+  .heart {
+    font-size: 40px;
+    margin-bottom: 14px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+
+  /* ---------- RECIPIENT: reveal skins ---------- */
+  .reveal-wrap {
+    width: 100%;
+    max-width: 480px;
+    border-radius: 22px;
+    padding: 40px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn .5s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.08);
+    margin-bottom: 18px;
+  }
+  .reveal-msg {
+    font-size: 21px;
+    line-height: 1.5;
+    margin: 0 0 26px;
+  }
+  .again-link {
+    display: inline-block;
+    font-size: 13px;
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+  }
+
+  /* skin: confetti */
+  .skin-confetti { background: #fff6f0; color: #4a3b32; }
+  .skin-confetti .reveal-msg { font-family: Georgia, serif; }
+  /* skin: starlight */
+  .skin-starlight { background: radial-gradient(circle at 30% 20%, #1c2340, #05070f); color: #f4ecd8; }
+  .skin-starlight .reveal-msg { font-family: Georgia, 'Times New Roman', serif; }
+  .skin-starlight .badge { background: rgba(255,255,255,0.12); }
+  .skin-starlight .again-link { background: #f4ecd8; color: #1c2340; }
+  /* skin: floral */
+  .skin-floral { background: linear-gradient(160deg, #fdf0f3, #f7e4ec); color: #6b3f4d; }
+  .skin-floral .reveal-msg { font-family: 'Brush Script MT', cursive, Georgia, serif; font-size: 24px; }
+  /* skin: retro */
+  .skin-retro { background: #f1e9d6; color: #3a2f22; border: 6px solid #3a2f22; }
+  .skin-retro .reveal-msg { font-family: 'Courier New', monospace; }
+  .skin-retro .badge { background: #3a2f22; color: #f1e9d6; }
+  .skin-retro .again-link { background: #3a2f22; color: #f1e9d6; }
+  /* skin: balloon */
+  .skin-balloon { background: linear-gradient(160deg, #fff2e0, #ffe1ec); color: #5a3b3b; }
+  .skin-balloon .reveal-msg { font-family: Verdana, sans-serif; }
+  /* skin: zen */
+  .skin-zen { background: #eef1ea; color: #3c4a3c; }
+  .skin-zen .reveal-msg { font-family: Georgia, serif; font-weight: 300; }
+  .skin-zen .badge { background: rgba(60,74,60,0.1); }
+  /* skin: neon */
+  .skin-neon { background: #0b0b12; color: #f4f4f9; }
+  .skin-neon .reveal-msg { font-family: 'Courier New', monospace; text-shadow: 0 0 10px #ff5fd1, 0 0 22px #5fd1ff; }
+  .skin-neon .badge { background: rgba(255,255,255,0.1); box-shadow: 0 0 10px rgba(95,209,255,0.6); }
+  .skin-neon .again-link { background: linear-gradient(90deg,#ff5fd1,#5fd1ff); color: #0b0b12; }
+  /* skin: lantern */
+  .skin-lantern { background: linear-gradient(160deg, #3a1f12, #6b3410); color: #ffe9c7; }
+  .skin-lantern .reveal-msg { font-family: Georgia, serif; }
+  .skin-lantern .badge { background: rgba(255,255,255,0.12); }
+  .skin-lantern .again-link { background: #ffe9c7; color: #3a1f12; }
+
+  .decor { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .decor span { position: absolute; opacity: .55; }
+
+  footer.hint {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ---------------- DATA ---------------- */
+const MESSAGE_BANK = {
+  wholesome: { label: "Wholesome", emoji: "💛", items: [
+    ["You are exactly the kind of person the word \"good\" was invented for.",1],
+    ["Somewhere out there, someone's day got better just because you exist. Today, that someone is me.",1],
+    ["Consider this your official reminder that you're doing better than you think.",1],
+    ["If kindness had a face, it'd probably just steal yours.",1],
+    ["You're the human equivalent of finding money in an old coat pocket.",1],
+    ["Just so you know: you're allowed to be proud of yourself today.",1],
+    ["You make hard days feel a little more survivable. That's not nothing.",1],
+    ["Sending you a virtual hug — weightless, but fully sincere.",1],
+  ]},
+  genie: { label: "Genie Wish", emoji: "🧞", items: [
+    ["Wish granted: every playlist you make from now on has zero skips.",1],
+    ["Wish granted: you always find a parking spot exactly when you need one.",1],
+    ["Wish granted: your phone battery lasts 20% longer than it has any right to.",2],
+    ["Wish granted: the next package you're waiting on arrives a day early.",1],
+    ["Wish granted: you get the last good seat, every time, forever.",1],
+    ["Wish granted: your group chat agrees on a restaurant on the first try.",2],
+    ["Wish granted: you never again get the shopping cart with the squeaky wheel.",1],
+    ["Wish granted: your next haircut is somehow exactly what you pictured.",1],
+  ]},
+  backhanded: { label: "Backhanded Compliment", emoji: "🙃", items: [
+    ["You have the confidence of someone who's never seen the group photo.",3],
+    ["Not everyone could pull off that level of \"trying their best.\" Respect.",3],
+    ["You're proof that a good personality really can carry a person.",3],
+    ["I'd say you've peaked, but that would require peaking to begin with.",3],
+    ["Your vibe says \"main character,\" your decisions say \"comic relief.\"",3],
+    ["You bring so much to the table. Mostly snacks, but still.",3],
+    ["Iconic, in the sense that no one's quite sure what you're going for.",3],
+  ]},
+  curse: { label: "Curse", emoji: "🔮", items: [
+    ["Curse cast: you will always get the shopping cart with the squeaky wheel.",2],
+    ["Curse cast: your show buffers at the exact wrong moment, forever.",2],
+    ["Curse cast: you'll always sit down right as your leg falls asleep.",2],
+    ["Curse cast: autocorrect betrays you at least once a week for the rest of your life.",2],
+    ["Curse cast: every future group photo, you're mid-blink.",3],
+    ["Curse cast: you always remember the perfect reply five minutes too late.",3],
+    ["Curse cast: your card gets declined first, every time, purely for dramatic effect.",4],
+    ["Curse cast: the ice cream truck plays its song and is never, ever actually near you.",3],
+    ["Curse cast: you will spend the rest of your life almost being funny.",5],
+    ["Curse cast: you will be \"so close\" to winning something, every time, for the rest of your natural life.",5],
+    ["Curse cast: somewhere, someone is telling a story about you right now, and it's not the flattering one.",5],
+    ["Curse cast: you peaked. It already happened. You weren't paying attention.",5],
+  ]},
+  roast: { label: "Roast", emoji: "🔥", items: [
+    ["You have main character energy in a story literally nobody asked to read.",4],
+    ["You're not lazy, you're just deeply committed to conserving energy for absolutely nothing.",4],
+    ["If overthinking burned calories, you'd be an athlete.",4],
+    ["You give \"reply guy\" energy even in real life conversations.",4],
+    ["The confidence is unmatched. The evidence supporting it? Still pending.",4],
+    ["You're what happens when \"main character syndrome\" meets \"side character budget.\"",5],
+    ["Some people peak in high school. You're still warming up for that.",4],
+  ]},
+  prophecy: { label: "Prophecy", emoji: "✨", items: [
+    ["The stars have spoken: you will text \"we should hang out soon\" at least four more times this year without it happening.",2],
+    ["It is foretold: you will open the fridge, stare into it, and close it without eating, within the hour.",2],
+    ["The future holds a mystery Tupperware container in your fridge that no one, not even you, can identify.",3],
+    ["Prophecy: you will rewatch a show you've already seen instead of starting something new. Tonight.",2],
+    ["It is written: your \"five more minutes\" will, once again, become forty.",3],
+  ]},
+  chaos: { label: "Chaos", emoji: "🌀", items: [
+    ["By the power vested in absolutely no one, I hereby declare it Tuesday energy, permanently, for you.",3],
+    ["You have been visited by the microwave gremlin. Nothing bad happens. It's just watching.",3],
+    ["This message has unlocked nothing. Absolutely nothing. Enjoy that feeling.",3],
+    ["You now have access to zero (0) new abilities. Use them wisely.",3],
+    ["Legally, this message means nothing. Emotionally, I hope it ruins your whole week in a fun way.",4],
+  ]},
+};
+
+const SKINS = ["confetti","starlight","floral","retro","balloon","zen","neon","lantern"];
+const BADGES = { wholesome:"💛 Wholesome", genie:"🧞 Wish Granted", backhanded:"🙃 Backhanded", curse:"🔮 Cursed", roast:"🔥 Roasted", prophecy:"✨ Prophecy", chaos:"🌀 Chaos" };
+
+const STATUS_LINES = [
+  "Gathering good vibes...",
+  "Sprinkling in some kindness...",
+  "Double-checking the universe has time for this...",
+  "Wrapping it up with care...",
+  "Almost there..."
+];
+
+/* ---------------- ROUTING ---------------- */
+const params = new URLSearchParams(window.location.search);
+const payload = params.get('w');
+
+if (payload) {
+  renderRecipient(payload);
+} else {
+  renderSender();
+}
+
+/* ---------------- SENDER ---------------- */
+function renderSender() {
+  const app = document.getElementById('app');
+  const catKeys = Object.keys(MESSAGE_BANK);
+  let activeCat = catKeys[0];
+  let selectedIndex = 0;
+  let useCustom = false;
+
+  app.innerHTML = `
+    <div class="sender-card">
+      <h1>Send a Wish</h1>
+      <p class="sub">They'll always see something wholesome loading. What they get at the end is up to you.</p>
+      <div class="cat-tabs" id="catTabs"></div>
+      <div class="msg-list" id="msgList"></div>
+      <div class="custom-block">
+        <label><input type="checkbox" id="customToggle"> Write my own message instead</label>
+        <textarea id="customText" rows="2" placeholder="Type your own wish or curse..." disabled></textarea>
+        <div class="tier-row" id="tierRow" style="display:none;">
+          <span style="font-size:12px;color:var(--muted)">Spice</span>
+          <input type="range" id="tierSlider" min="1" max="5" value="3">
+          <span class="spice" id="tierLabel">🌶️🌶️🌶️</span>
+        </div>
+      </div>
+      <button class="btn" id="genBtn">Generate Link</button>
+      <div class="result" id="resultBlock">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Shareable link</label>
+        <input class="link-out" id="linkOut" readonly>
+        <div>
+          <button class="btn secondary" id="copyBtn">Copy Link</button>
+          <button class="btn secondary" id="previewBtn">Preview as Recipient</button>
+        </div>
+      </div>
+      <footer class="hint">The recipient never sees the category or spice level ahead of time — only the loading screen, then the reveal.</footer>
+    </div>
+  `;
+
+  const catTabs = document.getElementById('catTabs');
+  catKeys.forEach(key => {
+    const tab = document.createElement('div');
+    tab.className = 'cat-tab' + (key === activeCat ? ' active' : '');
+    tab.textContent = MESSAGE_BANK[key].emoji + ' ' + MESSAGE_BANK[key].label;
+    tab.addEventListener('click', () => {
+      activeCat = key;
+      selectedIndex = 0;
+      document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderMsgList();
+    });
+    catTabs.appendChild(tab);
+  });
+
+  function renderMsgList() {
+    const list = document.getElementById('msgList');
+    list.innerHTML = '';
+    MESSAGE_BANK[activeCat].items.forEach((item, idx) => {
+      const [text, tier] = item;
+      const row = document.createElement('div');
+      row.className = 'msg-item' + (idx === selectedIndex && !useCustom ? ' selected' : '');
+      row.innerHTML = `<span>${text}</span><span class="spice">${'🌶️'.repeat(tier)}</span>`;
+      row.addEventListener('click', () => {
+        selectedIndex = idx;
+        useCustom = false;
+        document.getElementById('customToggle').checked = false;
+        document.getElementById('customText').disabled = true;
+        document.getElementById('tierRow').style.display = 'none';
+        renderMsgList();
+      });
+      list.appendChild(row);
+    });
+  }
+  renderMsgList();
+
+  const customToggle = document.getElementById('customToggle');
+  const customText = document.getElementById('customText');
+  const tierRow = document.getElementById('tierRow');
+  const tierSlider = document.getElementById('tierSlider');
+  const tierLabel = document.getElementById('tierLabel');
+
+  customToggle.addEventListener('change', () => {
+    useCustom = customToggle.checked;
+    customText.disabled = !useCustom;
+    tierRow.style.display = useCustom ? 'flex' : 'none';
+    if (useCustom) customText.focus();
+  });
+  tierSlider.addEventListener('input', () => {
+    tierLabel.textContent = '🌶️'.repeat(parseInt(tierSlider.value, 10));
+  });
+
+  document.getElementById('genBtn').addEventListener('click', () => {
+    let text, category;
+    if (useCustom) {
+      text = customText.value.trim() || 'You are exactly the kind of person the word "good" was invented for.';
+      category = activeCat; // badge/category still tags custom text with current tab
+    } else {
+      text = MESSAGE_BANK[activeCat].items[selectedIndex][0];
+      category = activeCat;
+    }
+    const tier = useCustom ? parseInt(tierSlider.value, 10) : MESSAGE_BANK[activeCat].items[selectedIndex][1];
+    const data = { m: text, c: category, t: tier };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+    const url = `${window.location.origin}${window.location.pathname}?w=${encoded}`;
+    document.getElementById('linkOut').value = url;
+    document.getElementById('resultBlock').classList.add('show');
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    const linkOut = document.getElementById('linkOut');
+    linkOut.select();
+    document.execCommand('copy');
+  });
+  document.getElementById('previewBtn').addEventListener('click', () => {
+    const url = document.getElementById('linkOut').value;
+    if (url) window.location.href = url;
+  });
+}
+
+/* ---------------- RECIPIENT ---------------- */
+function decodePayload(encoded) {
+  try {
+    return JSON.parse(decodeURIComponent(atob(encoded)));
+  } catch (e) {
+    return { m: "You are exactly the kind of person the word \"good\" was invented for.", c: "wholesome", t: 1 };
+  }
+}
+
+function renderRecipient(encoded) {
+  const data = decodePayload(encoded);
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="loading-card" id="loadingCard">
+      <div class="heart">💛</div>
+      <h2>Sending you something good...</h2>
+      <div class="status" id="statusLine">${STATUS_LINES[0]}</div>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    </div>
+  `;
+
+  const bar = document.getElementById('barFill');
+  const statusLine = document.getElementById('statusLine');
+  let progress = 0;
+  let lineIdx = 0;
+  const totalDuration = 2600 + (data.t || 1) * 120; // slight variation, never reveals intent
+  const stepMs = 90;
+  const steps = Math.floor(totalDuration / stepMs);
+  let step = 0;
+
+  const interval = setInterval(() => {
+    step++;
+    progress = Math.min(100, Math.round((step / steps) * 100));
+    bar.style.width = progress + '%';
+    const nextLineIdx = Math.min(STATUS_LINES.length - 1, Math.floor((progress / 100) * STATUS_LINES.length));
+    if (nextLineIdx !== lineIdx) {
+      lineIdx = nextLineIdx;
+      statusLine.textContent = STATUS_LINES[lineIdx];
+    }
+    if (progress >= 100) {
+      clearInterval(interval);
+      setTimeout(() => revealMessage(data), 350);
+    }
+  }, stepMs);
+}
+
+function revealMessage(data) {
+  const app = document.getElementById('app');
+  const skin = SKINS[Math.floor(Math.random() * SKINS.length)];
+  const badge = BADGES[data.c] || "💛 Wholesome";
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
+
+  app.innerHTML = `
+    <div class="reveal-wrap skin-${skin}">
+      <div class="decor" id="decor"></div>
+      <div class="badge">${badge}</div>
+      <div class="reveal-msg">${escapeHtml(data.m)}</div>
+      <a class="again-link" href="${baseUrl}">Send someone their own →</a>
+    </div>
+  `;
+  decorate(skin);
+}
+
+function decorate(skin) {
+  const decor = document.getElementById('decor');
+  if (!decor) return;
+  const map = {
+    confetti: ["🎉","🎊","✨"],
+    starlight: ["✦","✧","⋆"],
+    floral: ["🌸","🌷","🌼"],
+    retro: [],
+    balloon: ["🎈","🎈","🎈"],
+    zen: ["○","◦"],
+    neon: ["▲","◆"],
+    lantern: ["🏮"]
+  };
+  const glyphs = map[skin] || [];
+  for (let i = 0; i < 14; i++) {
+    const span = document.createElement('span');
+    span.textContent = glyphs.length ? glyphs[i % glyphs.length] : '';
+    span.style.left = Math.random() * 100 + '%';
+    span.style.top = Math.random() * 100 + '%';
+    span.style.fontSize = (12 + Math.random() * 16) + 'px';
+    span.style.transform = `rotate(${Math.random()*40-20}deg)`;
+    decor.appendChild(span);
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>

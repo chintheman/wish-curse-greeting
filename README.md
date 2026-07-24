@@ -9,5 +9,15 @@ See [`reports/2026-07-24-handoff-status-report.md`](reports/2026-07-24-handoff-s
 ## Contents
 
 - `reports/` — status reports and handoff docs
-- `wish-app/` — the app itself (`index.html`) — *not yet added, see the report's Open Item*
-- `wish-content-brainstorm.md` — message copy reference — *not yet added, see the report's Open Item*
+- `wish-app/` — the app itself (`index.html`)
+- `wish-content-brainstorm.md` — message copy reference
+
+## Run it locally
+
+No build step. Open `wish-app/index.html` directly, or serve it (recommended for clipboard reliability):
+
+```bash
+cd wish-app && python3 -m http.server 8000
+```
+
+Then visit `http://localhost:8000/`. The sender view loads by default; append `?w=<encoded>` to preview a specific recipient state, or use the in-app "Preview as Recipient" button after generating a link.

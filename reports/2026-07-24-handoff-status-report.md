@@ -4,7 +4,7 @@
 **Last updated:** 2026-07-24
 **Reference files (to be added to this repo):** `wish-content-brainstorm.md` (copy reference), `wish-app/index.html` (the app itself)
 
-> This report was written from a handoff summary during repo setup. The two reference files above have not yet been committed to this repository — see "Open item" at the bottom.
+> This report was written from a handoff summary during repo setup. Both reference files above have since been committed to this repository — see "Open item" at the bottom.
 
 ---
 
@@ -100,4 +100,4 @@ then visit `http://localhost:8000/`. The sender view loads by default; append `?
 
 ## Open item
 
-This repository (`chintheman/wish-curse-greeting`) was just created to host this project and currently contains only this report — `wish-app/index.html` and `wish-content-brainstorm.md` themselves have not been added yet. Add them (e.g. via a follow-up commit or PR) so the code referenced above actually lives here.
+~~This repository (`chintheman/wish-curse-greeting`) was just created to host this project and currently contains only this report — `wish-app/index.html` and `wish-content-brainstorm.md` themselves have not been added yet.~~ **Resolved:** both files were added in a follow-up commit and now live at [`wish-app/index.html`](../wish-app/index.html) and [`wish-content-brainstorm.md`](../wish-content-brainstorm.md).
